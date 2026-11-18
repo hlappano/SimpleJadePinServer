@@ -1,17 +1,67 @@
-# Start with Python base image
-FROM python:3.12-alpine
+# Use official Python runtime as parent image
+FROM python:3.13.2-bullseye
+
+#
+# Environment Variables
+#
+ENV NODE_JS_VERSION=26.8.2
+ENV NODE_LINUX=node-v${NODE_JS_VERSION}-linux
+ENV NODE_JS_DL_PATH=https://nodejs.org/download/release/v${NODE_JS_VERSION}/${NODE_LINUX}
+
+#
+# Python Setup
+#
+# Copy the requirements file
+COPY requirements.txt .
+# Install Python dependencies
+RUN pip install --upgrade pip && pip install -U --no-cache-dir --require-hashes -r requirements.txt
+
+# Create user permissions
+RUN useradd -m -u 1000 app
 
 # Set the working directory
 WORKDIR /app
 
-# Copy necessary files
-COPY SimpleJadePinServer.py index.html oracle_qr.html qrcode.js /app/
+#
+# Install Node JS
+#
+RUN u_arch=$(uname -m) && \
+    case "${u_arch}" in \
+        x86_64) arch="x64" ;; \
+        armv7l) arch="armv7l" ;; \
+        aarch64) arch="arm64" ;; \
+        *) echo "Unsupported architecture: ${arch}" && exit 1 ;; \
+    esac && \
+    curl -SL "${NODE_JS_DL_PATH}-${arch}.tar.gz" | tar -xzC /app && \
+    mv /app/${NODE_LINUX}-${arch} /app/${NODE_LINUX}
 
-# Install dependencies
-RUN pip install --no-cache-dir wallycore
+# Set the PATH to include Node.js
+ENV PATH="${PATH}:/app/${NODE_LINUX}/bin"
 
-# Expose the required port
-EXPOSE 4443
+#
+# Copy the application code
+#
+COPY ./server /app/server
+COPY ./web /app/web
+COPY ./startup.sh /app/startup.sh
 
-# Set the entrypoint to the main command, so additional args can be passed in docker-compose.yml
-ENTRYPOINT ["python3", "/app/SimpleJadePinServer.py"]
+#
+# Install dependencies for frontend
+#
+RUN cd /app/web && \
+    # Install Node.js dependencies
+    npm install && \
+    # Go back to the app directory
+    cd /app
+
+# Set the permissions
+RUN chown -R app:app .
+
+# Expose the port
+EXPOSE 5000 4443
+
+# Setup entrypoint
+ENTRYPOINT [ "/app/startup.sh" ]
+
+# Start Application as Root
+USER root

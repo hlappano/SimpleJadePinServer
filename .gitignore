@@ -1,1 +1,12 @@
+# Ignore Cache
+**/__pycache__/
+
+# Ignore package-lock.json
+**/package-lock.json
+
+# Ignore npm install
+**/node_modules
+**/.svelte-kit
+
+# Ignore key data
 key_data/

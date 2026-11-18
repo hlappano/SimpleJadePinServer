@@ -1,3 +1,9 @@
+# Jade Pin Server
+
+A reimplementation of the [Filiprogrammer: SimpleJadePinServer](https://github.com/Filiprogrammer/SimpleJadePinServer) with insights from [BoltAdvantage: SimpleJadePinServer](https://github.com/boltadvantage/SimpleJadePinServer)
+
+The reasoning for the rearch was needing some custom configurations for UmbrelOS, including camera focus and zoom, as well as wanted to just have fun making it into a Svelte App.
+
 SimpleJadePinServer
 ===================
 

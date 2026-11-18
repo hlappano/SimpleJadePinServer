@@ -1,0 +1,656 @@
+
+import { qrcode }from './qrcode.js'
+
+import { jade_proxy_port } from '#lib/stores/GlobalStore.js';
+import { get } from 'svelte/store';
+
+/**
+ * Returns the full URL for the destination to the server
+ * @param {string} endpoint 
+ * @returns full endpoint url
+ */
+export function getApiUrl(endpoint) {
+    const hostname = window.location.hostname; // e.g., "127.0.0.1" or "localhost"
+    const protocol = window.location.protocol; // "http:" or "https:"
+
+    let backendPort = get(jade_proxy_port);
+
+    return `${protocol}//${hostname}:${backendPort}${endpoint}`;
+}
+
+
+export class BufferReader {
+    constructor(buffer) {
+        this.buffer = buffer;
+        this.pos = 0;
+    }
+
+    peekByte() {
+        return this.buffer[this.pos];
+    }
+
+    readByte() {
+        return this.buffer[this.pos++];
+    }
+
+    readUint16() {
+        var result = (this.buffer[this.pos] << 8) | this.buffer[this.pos + 1];
+        this.pos += 2;
+        return result;
+    }
+
+    readUint32() {
+        var result = (this.buffer[this.pos] << 32) | (this.buffer[this.pos + 1] << 16) | (this.buffer[this.pos + 2] << 8) | this.buffer[this.pos + 3];
+        this.pos += 4;
+        return result;
+    }
+
+    readUint64() {
+        var result = (this.buffer[this.pos] << 56) | (this.buffer[this.pos + 1] << 48) | (this.buffer[this.pos + 2] << 40) | (this.buffer[this.pos + 3] << 32) | (this.buffer[this.pos + 4] << 24) | (this.buffer[this.pos + 5] << 16) | (this.buffer[this.pos + 6] << 8) | this.buffer[this.pos + 7];
+        this.pos += 8;
+        return result;
+    }
+
+    readChunk(length) {
+        var result = new Uint8Array(length);
+
+        for (let i = 0; i < length; ++i) {
+            result[i] = this.buffer[this.pos + i];
+        }
+
+        this.pos += length;
+        return result;
+    }
+}
+
+export class BufferWriter {
+    constructor() {
+        this.buffer = new Uint8Array(0);
+    }
+
+    writeByte(value) {
+        let new_buffer = new Uint8Array(this.buffer.length + 1);
+        new_buffer.set(this.buffer);
+        new_buffer[this.buffer.length] = value & 0xFF;
+        this.buffer = new_buffer;
+    }
+
+    writeUint16(value) {
+        let new_buffer = new Uint8Array(this.buffer.length + 2);
+        new_buffer.set(this.buffer);
+        new_buffer[this.buffer.length] = (value >> 8) & 0xFF;
+        new_buffer[this.buffer.length + 1] = value & 0xFF;
+        this.buffer = new_buffer;
+    }
+
+    writeUint32(value) {
+        let new_buffer = new Uint8Array(this.buffer.length + 4);
+        new_buffer.set(this.buffer);
+        new_buffer[this.buffer.length] = (value >> 24) & 0xFF;
+        new_buffer[this.buffer.length + 1] = (value >> 16) & 0xFF;
+        new_buffer[this.buffer.length + 2] = (value >> 8) & 0xFF;
+        new_buffer[this.buffer.length + 3] = value & 0xFF;
+        this.buffer = new_buffer;
+    }
+
+    writeUint64(value) {
+        let new_buffer = new Uint8Array(this.buffer.length + 8);
+        new_buffer.set(this.buffer);
+        new_buffer[this.buffer.length] = (value >> 56) & 0xFF;
+        new_buffer[this.buffer.length + 1] = (value >> 48) & 0xFF;
+        new_buffer[this.buffer.length + 2] = (value >> 40) & 0xFF;
+        new_buffer[this.buffer.length + 3] = (value >> 32) & 0xFF;
+        new_buffer[this.buffer.length + 4] = (value >> 24) & 0xFF;
+        new_buffer[this.buffer.length + 5] = (value >> 16) & 0xFF;
+        new_buffer[this.buffer.length + 6] = (value >> 8) & 0xFF;
+        new_buffer[this.buffer.length + 7] = value & 0xFF;
+        this.buffer = new_buffer;
+    }
+
+    writeChunk(chunk) {
+        let new_buffer = new Uint8Array(this.buffer.length + chunk.length);
+        new_buffer.set(this.buffer);
+
+        for (let i = 0; i < chunk.length; ++i) {
+            new_buffer[this.buffer.length + i] = chunk[i];
+        }
+
+        this.buffer = new_buffer;
+    }
+
+    writeString(str) {
+        let new_buffer = new Uint8Array(this.buffer.length + str.length);
+        new_buffer.set(this.buffer);
+
+        for (let i = 0; i < str.length; ++i) {
+            new_buffer[this.buffer.length + i] = str.charCodeAt(i);
+        }
+
+        this.buffer = new_buffer;
+    }
+
+    getBuffer() {
+        return this.buffer;
+    }
+}
+
+export const CborType = {
+    Uint: 0,
+    Bytes: 2,
+    String: 3,
+    Array: 4,
+    Object: 5
+};
+
+
+
+export function cbor_encode_string(data) {
+    let buffer_writer = new BufferWriter();
+    buffer_writer.writeByte((3 << 5) | Math.min(data.length, 24));
+
+    if (data.length >= 24) {
+        buffer_writer.writeByte(data.length);
+    }
+
+    buffer_writer.writeString(data);
+
+    return buffer_writer.getBuffer();
+}
+
+export function cbor_encode_bytes(data) {
+    let buffer_writer = new BufferWriter();
+    buffer_writer.writeByte((2 << 5) | Math.min(data.length, 24));
+
+    if (data.length >= 24) {
+        buffer_writer.writeByte(data.length);
+    }
+
+    buffer_writer.writeChunk(data);
+
+    return buffer_writer.getBuffer();
+}
+
+export function cbor_encode_uint(data) {
+    let buffer_writer = new BufferWriter();
+
+    if (data < 24) {
+        buffer_writer.writeByte(data);
+    } else if (data < 256) {
+        buffer_writer.writeByte(24);
+        buffer_writer.writeByte(data);
+    } else if (data < 65536) {
+        buffer_writer.writeByte(25);
+        buffer_writer.writeUint16(data);
+    } else if (data < 4294967296) {
+        buffer_writer.writeByte(26);
+        buffer_writer.writeUint32(data);
+    } else {
+        buffer_writer.writeByte(27);
+        buffer_writer.writeUint64(data);
+    }
+
+    return buffer_writer.getBuffer();
+}
+
+
+export function growUint8Array(originalArray, additionalSize) {
+    let newSize = originalArray.length + additionalSize;
+    let newArray = new Uint8Array(newSize);
+    newArray.set(originalArray);
+    return newArray;
+}
+
+export function cbor_encode_array(data) {
+    let buffer_writer = new BufferWriter();
+    buffer_writer.writeByte((4 << 5) | Math.min(data.length, 24));
+
+    if (data.length >= 24) {
+        buffer_writer.writeByte(data.length);
+    }
+
+    for (let i = 0; i < data.length; ++i) {
+        let item;
+
+        if (typeof data[i] == "number") {
+            item = cbor_encode_uint(data[i]);
+        } else if (data[i].constructor == Uint8Array) {
+            item = cbor_encode_bytes(data[i]);
+        }
+
+        buffer_writer.writeChunk(item);
+    }
+
+    return buffer_writer.getBuffer();
+}
+
+export function cbor_encode_object(data) {
+    let buffer_writer = new BufferWriter();
+    let keys = Object.keys(data);
+    buffer_writer.writeByte((5 << 5) | Math.min(keys.length, 24));
+
+    if (keys.length >= 24) {
+        buffer_writer.writeByte(keys.length);
+    }
+
+    for (let i = 0; i < keys.length; ++i) {
+        let item;
+
+        // Key
+        if (typeof keys[i] == "number") {
+            item = cbor_encode_uint(keys[i]);
+        } else if (typeof keys[i] == "string") {
+            item = cbor_encode_string(keys[i]);
+        } else if (keys[i].constructor == Uint8Array) {
+            item = cbor_encode_bytes(keys[i]);
+        }
+
+        buffer_writer.writeChunk(item);
+
+        // Value
+        let value = data[keys[i]];
+
+        if (typeof value == "number") {
+            item = cbor_encode_uint(value);
+        } else if (typeof value == "string") {
+            item = cbor_encode_string(value);
+        } else if (value.constructor == Uint8Array) {
+            item = cbor_encode_bytes(value);
+        } else {
+            item = cbor_encode_object(value);
+        }
+
+        buffer_writer.writeChunk(item);
+    }
+
+    return buffer_writer.getBuffer();
+}
+
+
+
+export function cbor_read_header_value(reader) {
+    var value = reader.readByte() & 0x1f;
+
+    if (value < 24) {
+        return value;
+    } else if (value == 24) {
+        return reader.readByte();
+    } else if (value == 25) {
+        return reader.readUint16();
+    } else if (value == 26) {
+        return reader.readUint32();
+    } else if (value == 27) {
+        return reader.readUint64();
+    }
+
+    return null;
+}
+
+export function cbor_decode(reader) {
+    let type = reader.peekByte() >> 5;
+
+    switch (type) {
+        case CborType.Uint:
+            return cbor_read_header_value(reader);
+        case CborType.Bytes:
+            var len = cbor_read_header_value(reader);
+            return reader.readChunk(len);
+        case CborType.String:
+            var len = cbor_read_header_value(reader);
+            return new TextDecoder().decode(reader.readChunk(len));
+        case CborType.Array:
+            var len = cbor_read_header_value(reader);
+            var result = [];
+
+            for (let i = 0; i < len; ++i) {
+                result[i] = cbor_decode(reader);
+            }
+
+            return result;
+        case CborType.Object:
+            var len = cbor_read_header_value(reader);
+            var result = {};
+
+            for (let i = 0; i < len; ++i) {
+                var key = cbor_decode(reader);
+                var value = cbor_decode(reader);
+                result[key] = value;
+            }
+
+            return result;
+    }
+
+    return null;
+}
+
+export function splitUint8Array(uInt8Array, length) {
+    const result = [];
+    const arrayLength = uInt8Array.length;
+
+    for (let i = 0; i < arrayLength; i += length) {
+        const chunk = uInt8Array.subarray(i, i + length);
+        result.push(chunk);
+    }
+
+    return result;
+}
+
+
+export const fromHexString = (hexString) =>
+Uint8Array.from(hexString.match(/.{1,2}/g).map((byte) => parseInt(byte, 16)));
+
+export const toHexString = (bytes) =>
+bytes.reduce((str, byte) => str + byte.toString(16).padStart(2, '0'), '');
+
+
+export const bytewords = 'ableacidalsoapexaquaarchatomauntawayaxisbackbaldbarnbeltbetabiasbluebodybragbrewbulbbuzzcalmcashcatschefcityclawcodecolacookcostcruxcurlcuspcyandarkdatadaysdelidicedietdoordowndrawdropdrumdulldutyeacheasyechoedgeepicevenexamexiteyesfactfairfernfigsfilmfishfizzflapflewfluxfoxyfreefrogfuelfundgalagamegeargemsgiftgirlglowgoodgraygrimgurugushgyrohalfhanghardhawkheathelphighhillholyhopehornhutsicedideaidleinchinkyintoirisironitemjadejazzjoinjoltjowljudojugsjumpjunkjurykeepkenokeptkeyskickkilnkingkitekiwiknoblamblavalazyleaflegsliarlimplionlistlogoloudloveluaulucklungmainmanymathmazememomenumeowmildmintmissmonknailnavyneednewsnextnoonnotenumbobeyoboeomitonyxopenovalowlspaidpartpeckplaypluspoempoolposepuffpumapurrquadquizraceramprealredorichroadrockroofrubyruinrunsrustsafesagascarsetssilkskewslotsoapsolosongstubsurfswantacotasktaxitenttiedtimetinytoiltombtoystriptunatwinuglyundouniturgeuservastveryvetovialvibeviewvisavoidvowswallwandwarmwaspwavewaxywebswhatwhenwhizwolfworkyankyawnyellyogayurtzapszerozestzinczonezoom';
+export var bytewordsLookUpTable = [];
+export const BYTEWORDS_NUM = 256;
+export const BYTEWORD_LENGTH = 4;
+export const MINIMAL_BYTEWORD_LENGTH = 2;
+
+
+
+export function getWord(index) {
+    return bytewords.slice(index * BYTEWORD_LENGTH, (index * BYTEWORD_LENGTH) + BYTEWORD_LENGTH)
+}
+
+export function getMinimalWord(index) {
+    const byteword = getWord(index);
+
+    return byteword[0] + byteword[BYTEWORD_LENGTH - 1];
+}
+
+export function makeCRCTable() {
+    let c;
+    let crcTable = [];
+
+    for (let n = 0; n < 256; n++) {
+        c = n;
+        for (let k = 0; k < 8; k++) {
+            c = ((c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1));
+        }
+        crcTable[n] = c;
+    }
+
+    return crcTable;
+}
+
+
+
+
+export function crc32(str) {
+    let crcTable = window.crcTable || (window.crcTable = makeCRCTable());
+    let crc = 0 ^ (-1);
+
+    for (let i = 0; i < str.length; i++) {
+        crc = (crc >>> 8) ^ crcTable[(crc ^ str[i]) & 0xFF];
+    }
+
+    return (crc ^ (-1)) >>> 0;
+}
+
+export function bcur_encode_object(input) {
+    var ur = cbor_encode_object(input);
+
+    const maxFragmentLength = 34;
+    const minFragmentLength = 10;
+    var seqNum = 0;
+
+    const maxFragmentCount = Math.ceil(ur.length / minFragmentLength);
+    var fragmentLength = 0;
+
+    for (let fragmentCount = 1; fragmentCount <= maxFragmentCount; fragmentCount++) {
+        fragmentLength = Math.ceil(ur.length / fragmentCount);
+        if (fragmentLength <= maxFragmentLength) {
+            break;
+        }
+    }
+
+    var fragments = splitUint8Array(ur, fragmentLength);
+    var result = [];
+
+    if (fragments.length == 1) {
+        const word = toHexString(ur);
+        const crcAppendedWord = word + crc32(ur).toString(16).padStart(8, '0');
+        const crcWordBuff = fromHexString(crcAppendedWord);
+        const body = crcWordBuff.reduce((result, w) => result + getMinimalWord(w), '');
+        result.push("ur:jade-pin/" + body);
+    } else {
+        while (seqNum < fragments.length) {
+            var fragment = fragments[seqNum];
+            const seq = (seqNum + 1) + "-" + fragments.length;
+
+            if (fragment.length < fragmentLength) {
+                fragment = growUint8Array(fragment, fragmentLength - fragment.length);
+            }
+
+            let nestedFragment = [
+                seqNum + 1,
+                fragments.length,
+                ur.length,
+                crc32(ur),
+                fragment
+            ];
+
+            var outerFragment = cbor_encode_array(nestedFragment);
+
+            const word = toHexString(outerFragment);
+            const crcAppendedWord = word + crc32(outerFragment).toString(16).padStart(8, '0');
+            const crcWordBuff = fromHexString(crcAppendedWord);
+            const body = crcWordBuff.reduce((result, w) => result + getMinimalWord(w), '');
+            result.push("ur:jade-pin/" + seq + "/" + body);
+
+            ++seqNum;
+        }
+    }
+
+    return result;
+}
+
+export function bcur_decode_object(input) {
+    var result = {};
+
+    const input0_split = input[0].split('/');
+
+    if (input0_split[0].toLowerCase() !== "ur:jade-pin") {
+        throw new Error("bcur has to start with ur:jade-pin");
+    }
+
+    var ur;
+
+    if (input0_split.length == 3) {
+        const seq_split = input0_split[1].split('-');
+        const numberOfFrags = parseInt(seq_split[1]);
+        var fragments = null;
+
+        for (let i = 0; i < numberOfFrags; ++i) {
+            let bytewords = input[i].split('/')[2];
+            let decodedBytes = new Uint8Array(bytewords.length / 2 - 4);
+
+            for (let j = 0; j < decodedBytes.length; ++j) {
+                decodedBytes[j] = decodeWord(bytewords[j * 2] + bytewords[j * 2 + 1]);
+            }
+
+            let reader = new BufferReader(decodedBytes);
+            let nestedFragment = cbor_decode(reader);
+
+            if (fragments == null) {
+                fragments = Array(nestedFragment[1]);
+            }
+
+            if (i == (numberOfFrags - 1)) {
+                let urLength = nestedFragment[2];
+                let fragmentLength = nestedFragment[4].length;
+                let actualFragmentLength = urLength - fragmentLength * (numberOfFrags - 1);
+                fragments[i] = nestedFragment[4].subarray(0, actualFragmentLength);
+            } else {
+                fragments[i] = nestedFragment[4];
+            }
+        }
+
+        ur = Uint8Array.from(
+            fragments.reduce((acc, curr) => [...acc, ...curr], [])
+        );
+    } else if (input0_split.length == 2) {
+        let bytewords = input0_split[1];
+        let decodedBytes = new Uint8Array(bytewords.length / 2 - 4);
+
+        for (let i = 0; i < decodedBytes.length; ++i) {
+            decodedBytes[i] = decodeWord(bytewords[i * 2] + bytewords[i * 2 + 1]);
+        }
+
+        ur = decodedBytes;
+    }
+
+    let reader = new BufferReader(ur);
+    return cbor_decode(reader);
+}
+
+export function render_alphanumeric_qrcode(element_id, data) {
+    let qr = qrcode(0, 'L');
+    qr.addData(data.toUpperCase(), 'Alphanumeric');
+    qr.make();
+    document.getElementById(element_id).innerHTML = qr.createImgTag(4);
+}
+
+export function decodeWord(word) {
+    if (bytewordsLookUpTable.length == 0) {
+        bytewordsLookUpTable = Array(26);
+
+        for (let i = 0; i < BYTEWORDS_NUM; i++) {
+            const byteword = getWord(i);
+            let x = byteword[0].charCodeAt(0) - 'a'.charCodeAt(0);
+            let y = byteword[3].charCodeAt(0) - 'a'.charCodeAt(0);
+            let offset = y * 26 + x;
+            bytewordsLookUpTable[offset] = i;
+        }
+    }
+
+    let x = (word[0]).toLowerCase().charCodeAt(0) - 'a'.charCodeAt(0);
+    let y = (word[word.length - 1]).toLowerCase().charCodeAt(0) - 'a'.charCodeAt(0);
+    let offset = y * 26 + x;
+    let value = bytewordsLookUpTable[offset];
+
+    return value;
+}
+
+
+export var bcur1_fragments;
+
+export function set_bcur1_fragments(fragmentsValue) {
+    bcur1_fragments = fragmentsValue;
+}
+
+var request_data;
+
+export function scan_pin_request_done() {
+    let decoded_object = bcur_decode_object(bcur1_fragments);
+    let urls = decoded_object["result"]["http_request"]["params"]["urls"]
+    request_data = decoded_object["result"]["http_request"]["params"]["data"]["data"]
+    let pin_func = "get_pin";
+    if (urls.some(url => url.endsWith("set_pin"))) {
+        pin_func = "set_pin";
+    }
+    
+    var response = {
+        data: request_data,
+        replyPinFunc: pin_func
+    };
+
+    return response;
+}
+
+var qrcode2_interval;
+var bcur2_fragments;
+var bcur2_index = 1;
+
+
+export function set_pin() {
+    return new Promise((resolve, reject) => {
+        const xhttp = new XMLHttpRequest();
+        xhttp.onload = function() {
+            try {
+                let json_response = JSON.parse(this.responseText);
+                let data = json_response.data;
+                
+                if (typeof qrcode2_interval !== 'undefined') {
+                    clearInterval(qrcode2_interval);
+                }
+
+                bcur2_fragments = bcur_encode_object({
+                    "id": "0",
+                    "method": "pin",
+                    "params": {
+                        "data": data
+                    }
+                });
+
+                render_alphanumeric_qrcode("qrcode2", bcur2_fragments[0]);
+
+                qrcode2_interval = setInterval(function() {
+                    if (bcur2_index >= bcur2_fragments.length) {
+                        bcur2_index = 0;
+                    }
+
+                    render_alphanumeric_qrcode("qrcode2", bcur2_fragments[bcur2_index]);
+                    bcur2_index++;
+                }, 1000);
+
+                resolve(data);
+            } catch (e) {
+                reject(e);
+            }
+        };
+        xhttp.onerror = (err) => reject(err);
+        const targetUrl = getApiUrl('/set_pin');
+        xhttp.open("POST", targetUrl);
+        xhttp.setRequestHeader("Content-type", "application/json");
+        xhttp.send('{"data": "' + request_data + '"}');
+    });
+}
+
+
+export function get_pin() {
+    return new Promise((resolve, reject) => {
+        const xhttp = new XMLHttpRequest();
+        xhttp.onload = function() {
+            try {
+                let json_response = JSON.parse(this.responseText);
+                let data = json_response.data;
+
+                if (typeof qrcode2_interval !== 'undefined') {
+                    clearInterval(qrcode2_interval);
+                }
+
+                bcur2_fragments = bcur_encode_object({
+                    "id": "0",
+                    "method": "pin",
+                    "params": {
+                        "data": data
+                    }
+                });
+
+                render_alphanumeric_qrcode("qrcode2", bcur2_fragments[0]);
+
+                qrcode2_interval = setInterval(function() {
+                    if (bcur2_index >= bcur2_fragments.length) {
+                        bcur2_index = 0;
+                    }
+
+                    render_alphanumeric_qrcode("qrcode2", bcur2_fragments[bcur2_index]);
+                    bcur2_index++;
+                }, 1000);
+
+                resolve(data);
+            } catch (e) {
+                reject(e);
+            }
+        };
+        xhttp.onerror = (err) => reject(err);
+        
+        const targetUrl = getApiUrl('/get_pin');
+        xhttp.open("POST", targetUrl);
+        xhttp.setRequestHeader("Content-type", "application/json");
+        xhttp.send('{"data": "' + request_data + '"}');
+    });
+}

@@ -15,7 +15,7 @@
 //
 //---------------------------------------------------------------------
 
-var qrcode = function() {
+export var qrcode = function() {
 
   //---------------------------------------------------------------------
   // qrcode
@@ -2286,12 +2286,12 @@ var qrcode = function() {
 
 }();
 
-(function (factory) {
-  if (typeof define === 'function' && define.amd) {
-      define([], factory);
-  } else if (typeof exports === 'object') {
-      module.exports = factory();
-  }
-}(function () {
-    return qrcode;
-}));
+// (function (factory) {
+//   if (typeof define === 'function' && define.amd) {
+//       define([], factory);
+//   } else if (typeof exports === 'object' && typeof module !== 'undefined') {
+//       module.exports = factory();
+//   }
+// }(function () {
+//     return qrcode;
+// }));
