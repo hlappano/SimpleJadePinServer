@@ -16,7 +16,7 @@
     import {
         PageHeaderRow,
         ColumnCard
-    } from '#lib'
+    } from '#lib';
 
     // Carbon UI Components
     import {
@@ -25,13 +25,16 @@
         Stack,
         Tag,
         Divider,
+        Text,
         TextInput,
         TextArea,
         InlineNotification,
         Button,
         DataTable,
         TooltipDefinition,
-        Modal
+        Modal,
+        UnorderedList,
+        ListItem
     } from 'carbon-components-svelte';
 
     // Svelte
@@ -583,6 +586,46 @@
         title="Settings"
         icon={Settings}
     />
+    <Row class="sub-row">
+        <ColumnCard
+            title="Configuring Server Environment Variables"
+            subtitle="
+            Configure environment variables based on your system.
+                    These proxy environment variables are a way to help access the system in case you can not get into via localhost.
+                    For example, UmbrelOS 2.0 has environment variable settings, this is where you can overwrite them if your host is not umbrel.
+                    Or configure in the docker-compose.yml file.
+                    For any change, need to restart.
+            "
+        >
+            <Stack inline wrap="wrap" orientation="vertical" gap={3}>
+                <InlineNotification
+                    class="card-note"
+                    hideCloseButton
+                    kind="warning"
+                    title="WARNING: Security Change"
+                    subtitle="
+                        This is a security change for CORS and the auth guard to accept host and port.
+                    "
+                    />
+                <UnorderedList class="steps">
+                    <ListItem>
+                        <Text type="productive-heading-01" italic>PUBLIC_JADE_SERVER_PROXY_PORT</Text>
+                        <Text type="code-02">Backend server proxy port for cases if system has a mapped proxy port.</Text>
+                    </ListItem>
+                    <ListItem>
+                        <Text type="productive-heading-01" italic>PUBLIC_JADE_WEB_PROXY_PORT</Text>
+                        <Text type="code-02">Frontend web proxy port for cases if system has a mapped proxy port.</Text>
+                    </ListItem>
+                    <ListItem>
+                        <Text type="productive-heading-01" italic>PUBLIC_JADE_PROXY_HOST</Text>
+                        <Text type="code-02">System proxy host for cases if system has a different hostname other than localhost.</Text>
+                    </ListItem>
+                </UnorderedList>
+            </Stack>
+        </ColumnCard>
+        
+    </Row>
+
     <Row class="sub-row">
         <ColumnCard
             title="Hosts Allowed"

@@ -84,7 +84,6 @@ if __name__ == "__main__":
         print("  The default 127.0.0.1 is correct for almost every setup.")
         print("")
 
-    server = WSGIServer((config.LISTEN_IP, config.LISTEN_PORT), app)
     
     if config.USING_TLS:
         if not os.path.isfile(config.TLS_CERT_PATH):
@@ -97,8 +96,10 @@ if __name__ == "__main__":
             sys.exit(1)
         ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         ssl_context.load_cert_chain(certfile=config.TLS_CERT_PATH)
-        server.socket = ssl_context.wrap_socket(server.socket, server_side=True)
+        server = WSGIServer((config.LISTEN_IP, config.LISTEN_PORT), app, ssl_context=ssl_context)
 
+    else:
+        server = WSGIServer((config.LISTEN_IP, config.LISTEN_PORT), app)
 
     print(f"Server starting on {'https' if config.USING_TLS else 'http'}://{config.LISTEN_IP}:{config.LISTEN_PORT}")
     print(f"Data directory: {config.DATA_DIR}")
@@ -119,6 +120,12 @@ if __name__ == "__main__":
     gevent.signal_handler(signal.SIGTERM, shutdown)
     gevent.signal_handler(signal.SIGINT, shutdown)
 
+    # Allow Python to catch KeyboardInterrupt
+    signal.signal(signal.SIGINT, signal.default_int_handler)
+
     print("Starting server...")
-    server.serve_forever()
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        shutdown()
 

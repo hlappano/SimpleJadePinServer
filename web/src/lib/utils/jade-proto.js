@@ -5,17 +5,26 @@ import { jade_proxy_port } from '#lib/stores/GlobalStore.js';
 import { get } from 'svelte/store';
 
 /**
- * Returns the full URL for the destination to the server
+ * Get the Backend Urls
+ * @returns array of backend urls
+ */
+export function getBackendUrls() {
+    const hostname = window.location.hostname;
+    let backendPort = get(jade_proxy_port);
+
+    return [
+        `http://${hostname}:${backendPort}`,
+        `https://${hostname}:${backendPort}`,
+    ];
+}
+
+/**
+ * Returns the URL for the route server
  * @param {string} endpoint 
  * @returns full endpoint url
  */
 export function getApiUrl(endpoint) {
-    const hostname = window.location.hostname; // e.g., "127.0.0.1" or "localhost"
-    const protocol = window.location.protocol; // "http:" or "https:"
-
-    let backendPort = get(jade_proxy_port);
-
-    return `${protocol}//${hostname}:${backendPort}${endpoint}`;
+    return `/api/${endpoint}`;
 }
 
 

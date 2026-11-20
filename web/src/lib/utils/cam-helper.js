@@ -266,16 +266,22 @@ function finish(frags) {
     }
   }
 
-
 function preflight() {
-    
     if (!window.isSecureContext) {
-        // show notice
+        showAlert(
+            "error",
+            "Security Error",
+            "Camera requires a secure HTTPS context."
+        );
         return false;
     }
 
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia)  {
-        // show error
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)  {
+        showAlert(
+            "error",
+            "Not Found Error",
+            "navigator.mediaDevices.getUserMedia is not supported by this browser."
+        );
         return false;
     }
 

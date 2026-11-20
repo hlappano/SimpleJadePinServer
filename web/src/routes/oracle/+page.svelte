@@ -41,7 +41,8 @@
 
     // Javascript jade helpers
     import {
-        getApiUrl
+        getApiUrl,
+        getBackendUrls
     } from '#lib/utils/jade-proto.js';
     import {
         generate
@@ -106,7 +107,13 @@
     onMount(async () => {
         await getPubKey();
 
-        urlA = getApiUrl("");
+        var urls = getBackendUrls();
+        if (urls.length > 0) {
+            urlA = urls[0];
+            if (urls.length > 1) {
+                urlB = urls[1];
+            }
+        }
         loading = false;
     });
 
