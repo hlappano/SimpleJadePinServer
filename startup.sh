@@ -4,11 +4,9 @@ LOG_FILE="/app/npm_run.log"
 
 # Build the frontend
 cd /app/web
-# Run build
-npm run build
 
 # Start static server for frontend
-npm run preview -- --host 0.0.0.0 --port 5000 > ${LOG_FILE} &
+PORT=5000 HOST=0.0.0.0 node build/index.js > ${LOG_FILE} 2>&1 &
 
 # Start the backend server
 echo "Starting backend server..."

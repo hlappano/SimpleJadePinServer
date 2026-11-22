@@ -72,14 +72,14 @@ def protect_route():
             # check host header
             host = request.headers.get("Host")
             if not is_allowed_host(host):
-                print(f"Rejected not a localhost")
-                return jsonify({"error": "Forbidden: Host not local"}), 403
+                print(f"Rejected Host")
+                return jsonify({"error": "Forbidden: Host is not allowed."}), 403
 
             # Check origin
             origin = request.headers.get("Origin")
             if not is_local_origin(origin):
                 print(f"Rejected cross-origin request from {origin!r}")
-                return jsonify({"error": "Forbidden: Origin not local"}), 403
+                return jsonify({"error": "Forbidden: Origin is not allowed"}), 403
             
             return f(*args, **kwargs)
         return decorated_function

@@ -29,8 +29,17 @@ LICENSE file in the root directory of this source tree.
   
     // Check if width is a percentage
     let isPercentage = $derived(width.endsWith('%'));
-    let numericValue = $derived(isPercentage ? parseFloat(width.replace('%', '')) : 0);
-    let mobileWidth = $derived(isPercentage ? `${numericValue * 1.5}%` : width);
+    let isRem = $derived(width.endsWith('rem'));
+    let numericWidth = $derived(
+      isPercentage ? parseFloat(width.replace('%', '')) : 
+      isRem ? parseFloat(width.replace('rem', '')) : 
+      parseFloat(width)
+    );
+    let mobileWidth = $derived(
+      isPercentage ? `${numericWidth * 1.5}%` : 
+      isRem ? `${numericWidth * .5 }rem` : 
+      width
+    );
 </script>
 
 <style>

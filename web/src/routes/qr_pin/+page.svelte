@@ -258,7 +258,7 @@
             stepNum=1
             subtitle="On Jade Wallet:"
             icon={UnlockJade}
-            iconWidth="50%"
+            iconWidth="24rem"
         >
             <div>
                 <OrderedList class="steps">

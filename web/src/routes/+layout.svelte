@@ -30,23 +30,16 @@
 <style>
 
 	:root {
-	--crimson: #C41E3A;
-	--crimson-lt: #E8687E;
-	--crimson-dk: #9B1530;
-	--jade-dk: #061310;
-	--jade-ldk: #0f241e;
-	--jade-md: #44a78c;
-	--ink: #f8fafc;
-	--muted: rgba(255, 255, 255, 0.55);
-	--faint: rgba(255, 255, 255, 0.38);
-	--line: rgba(255, 255, 255, 0.08);
-	--ok: #2ecc71;
-	--warn: #f0a020;
-	--sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-		"Helvetica Neue", Arial, sans-serif;
-	--serif: "Playfair Display", Georgia, "Times New Roman", serif;
-	--mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
-		"Liberation Mono", monospace;
+		--jade-dk: #061310;
+		--jade-ldk: #0f241e;
+		--jade-md: #44a78c;
+		--crimson: #C41E3A;
+		--crimson-lt: #E8687E;
+		--crimson-dk: #9B1530;
+		--muted: rgba(255, 255, 255, 0.55);
+		--line: rgba(255, 255, 255, 0.08);
+		--sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+			"Helvetica Neue", Arial, sans-serif;
 	}
 
 	footer {
@@ -118,22 +111,8 @@
 	:global(.jade-button:hover:not(:disabled)) { background: var(--jade-ldk);}
 
 	:global(.jade-button:disabled) {
-	background: var(--crimson-dk);
-	color: var(--faint);
-	cursor: not-allowed;
-	}
-
-	:global(.jade-button.ghost) {
-	background: transparent;
-	border: 1px solid var(--line);
-	color: var(--muted);
-	font-weight: 500;
-	padding: 9px 16px;
-	}
-
-	:global(.jade-button.ghost:hover:not(:disabled)) {
-	background: var(--jade-md);
-	color: var(--ink);
+		background: var(--crimson-dk);
+		cursor: not-allowed;
 	}
 
 	:global(.bx--tile) {
@@ -160,9 +139,6 @@
 		padding-left: 2.5rem;
 		padding: 2rem;
 		padding-top: 0;
-		/* display: flex;
-		width: 100%;
-		flex-wrap: wrap; */
 	}
 
 	:global(.step-num)
@@ -171,7 +147,6 @@
 	}
 
 	:global(.readout) {
-		font-family: var(--mono);
 		font-size: 12px;
 		color: var(--muted);
 		background: var(--jade-ldk);
@@ -204,6 +179,7 @@
 		max-width: 100%;
 		width: auto !important;
 		display: flex !important;
+		min-width: 0;
 	}
 
 	:global(.bx--box-fill-layer-accent)

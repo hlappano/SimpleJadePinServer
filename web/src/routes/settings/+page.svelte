@@ -585,6 +585,7 @@
     <PageHeaderRow
         title="Settings"
         icon={Settings}
+        color={`var(--crimson)`}
     />
     <Row class="sub-row">
         <ColumnCard

@@ -13,8 +13,8 @@ export function getBackendUrls() {
     let backendPort = get(jade_proxy_port);
 
     return [
-        `http://${hostname}:${backendPort}`,
         `https://${hostname}:${backendPort}`,
+        `http://${hostname}:${backendPort}`,
     ];
 }
 

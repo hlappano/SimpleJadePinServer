@@ -51,6 +51,8 @@ COPY ./startup.sh /app/startup.sh
 RUN cd /app/web && \
     # Install Node.js dependencies
     npm install && \
+    # Build
+    npm run build && \
     # Go back to the app directory
     cd /app
 

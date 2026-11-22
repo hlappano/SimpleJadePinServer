@@ -130,7 +130,7 @@
 {#if !loading }
 <Grid fullWidth>
     <PageHeaderRow
-        title="QR Code Register"
+        title="Oracle QR Code Register"
         icon={QrCode}
     />
     <Row class="sub-row">
@@ -155,11 +155,11 @@
                     </ListItem>
                     <ListItem>
                         Select Blind Oracle.
-                        <Icon src={BlindOracleMenuImage} width="50%"/>
+                        <Icon src={BlindOracleMenuImage} width="24rem"/>
                     </ListItem>
                     <ListItem>
                         Select Scan Oracle QR.
-                        <Icon src={ScanQRImage} width="50%"/>
+                        <Icon src={ScanQRImage} width="24rem"/>
                     </ListItem>
                     <ListItem>
                         Proceed to next step.
@@ -180,7 +180,18 @@
                     kind="info"
                     hideCloseButton
                     title="Info"
-                    subtitle="You can edit the URL and add a Fallback URL if needed before generating QR Code."
+                    subtitle="
+                    These are the URLs that the Blockstream app reads from the Jade Wallet to make the pin requests.
+                    You can edit the URLs and add add a fallback URL if needed before generating QR Code.
+                    If using the Airgap method, these can be left alone to defaults.
+                    "
+                />
+                <InlineNotification
+                    class="card-note"
+                    kind="warning"
+                    hideCloseButton
+                    title="Warning"
+                    subtitle="If you are not using the Airgap method, make sure these urls are accessible before continuing. If not, check the settings."
                 />
 
                 <TextInput
@@ -219,7 +230,7 @@
             title="Confirm"
             stepNum=3
             icon={ConfirmImage}
-            iconWidth="50%"
+            iconWidth="24rem"
             subtitle="Confirm the On-Screen Details and Continue Setting Up Jade with PIN on Your Preferred Companion App."
         >
             <Stack wrap="wrap" orientation="vertical" gap={3}>

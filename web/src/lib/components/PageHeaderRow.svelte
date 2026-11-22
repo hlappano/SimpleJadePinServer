@@ -13,7 +13,8 @@ LICENSE file in the root directory of this source tree.
 
    let {
     icon = null,
-    title = ""
+    title = "",
+    color = "white"
     } = $props();
 
 </script>
@@ -21,9 +22,9 @@ LICENSE file in the root directory of this source tree.
 {#if icon != null}
 <Row class="header-row">
     {@const Icon = icon}
-    <Icon style="width: 4rem; height: 4rem"/>
+    <Icon fill={color} style="width: 4rem; height: 4rem"/>
 </Row>
 {/if}
 <Row class="header-row" style="Padding-top: 1rem">
-     <Heading class="page-icon-txt" type="productive-heading-03">{title}</Heading>
+     <Heading class="page-icon-txt" type="productive-heading-03" style="color: {color}">{title}</Heading>
 </Row>
